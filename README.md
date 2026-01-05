@@ -60,6 +60,7 @@ Frontend will start on `http://localhost:3000`
 ## API Endpoints
 
 - `POST /api/v1.0/register` - User registration
+- `POST /api/v1.0/login` - User Login
 - More endpoints coming soon...
 
 ## Project Status
