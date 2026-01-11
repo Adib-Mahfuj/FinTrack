@@ -61,6 +61,10 @@ Frontend will start on `http://localhost:3000`
 
 - `POST /api/v1.0/register` - User registration
 - `POST /api/v1.0/login` - User Login
+- `POST /api/v1.0/categories` - Create Category
+- `PUT /api/v1.0/categories/id` - Update Category
+- `GET /api/v1.0/categories` - Read Categories
+- `GET /api/v1.0/categories/type` - Read Categories By Type
 - More endpoints coming soon...
 
 ## Project Status
