@@ -59,13 +59,20 @@ Frontend will start on `http://localhost:3000`
 
 ## API Endpoints
 
-- `POST /api/v1.0/register` - User registration
-- `POST /api/v1.0/login` - User Login
-- `POST /api/v1.0/categories` - Create Category
-- `PUT /api/v1.0/categories/id` - Update Category
-- `GET /api/v1.0/categories` - Read Categories
+- `POST /api/v1.0/register`       - User registration
+- `POST /api/v1.0/login`          - User Login
+- `POST /api/v1.0/categories`     - Create Category
+- `PUT /api/v1.0/categories/id`   - Update Category
+- `GET /api/v1.0/categories`      - Read Categories
 - `GET /api/v1.0/categories/type` - Read Categories By Type
-- More endpoints coming soon...
+- `POST /api/v1.0/expenses`       - Add Expense
+- `GET /api/v1.0/expenses`        - Read Expenses
+- `DELETE /api/v1.0/expenses/id`  - Delete Expenses
+- `POST /api/v1.0/incomes`        - Add Income
+- `GET /api/v1.0/incomes`         - Read Incomes
+- `DELETE /api/v1.0/incomes`      - Delete Incomes
+- `POST /api/v1.0/filter`         - Filter Transactions
+- `GET /api/v1.0/dashboard`       - Dashboard Data
 
 ## Project Status
 
