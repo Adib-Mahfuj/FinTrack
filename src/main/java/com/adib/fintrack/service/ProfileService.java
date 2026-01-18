@@ -6,6 +6,7 @@ import com.adib.fintrack.entity.ProfileEntity;
 import com.adib.fintrack.repository.ProfileRepository;
 import com.adib.fintrack.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,12 +28,15 @@ public class ProfileService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
 
+    @Value("${app.activation.url}")
+    private  String activationURL;
+
     public ProfileDto registerProfile(ProfileDto profileDto) {
         ProfileEntity newProfile = toEntity(profileDto);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         newProfile = profileRepository.save(newProfile);
         // Send Activation Email
-        String activationLink = "http://localhost:8080/api/v1.0/activate?token=" + newProfile.getActivationToken();
+        String activationLink =activationURL+"/api/v1.0/activate?token=" + newProfile.getActivationToken();
         String subject = "Activate your FinTrack account";
         String body = "Click on the following link to activate your FinTrack account: " + activationLink;
         emailService.sendEmail(newProfile.getEmail(), subject, body);
