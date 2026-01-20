@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.adib.fintrack.FintrackApplicationTests
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 19.92 s -- in com.adib.fintrack.FintrackApplicationTests
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 13.66 s -- in com.adib.fintrack.FintrackApplicationTests
