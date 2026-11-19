@@ -25,7 +25,7 @@ public class IncomeService {
     private final IncomeRepository incomeRepository;
 
 
-    //Adding a new expense to the database
+    //Adding a new income to the database
     public IncomeDto addIncome(IncomeDto dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
         CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(),profile.getId())
