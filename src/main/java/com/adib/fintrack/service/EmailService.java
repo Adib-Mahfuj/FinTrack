@@ -73,4 +73,55 @@ public class EmailService {
             throw new RuntimeException("Mail server connection failed", e);
         }
     }
+
+    public void sendEmailWithAttachment(String to, String subject, String body,
+                                        byte[] fileBytes, String fileName) {
+        try {
+            OkHttpClient client = new OkHttpClient();
+
+            Map<String, Object> emailData = new HashMap<>();
+            emailData.put("sender", Map.of(
+                    "email", fromEmail,
+                    "name", fromName
+            ));
+            emailData.put("to", List.of(Map.of("email", to)));
+            emailData.put("subject", subject);
+            emailData.put("htmlContent", body);
+
+            // Brevo expects attachment content as a base64 string
+            emailData.put("attachment", List.of(Map.of(
+                    "name", fileName,
+                    "content", Base64.getEncoder().encodeToString(fileBytes)
+            )));
+
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonBody = mapper.writeValueAsString(emailData);
+
+            RequestBody requestBody = RequestBody.create(
+                    jsonBody,
+                    MediaType.parse("application/json")
+            );
+
+            Request request = new Request.Builder()
+                    .url(BREVO_API_URL)
+                    .addHeader("api-key", brevoApiKey)
+                    .addHeader("Content-Type", "application/json")
+                    .post(requestBody)
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    String errorBody = response.body() != null ? response.body().string() : "Unknown error";
+                    log.error("Brevo API error: {}", errorBody);
+                    throw new RuntimeException("Email sending failed: " + errorBody);
+                }
+            }
+
+            log.info("Email with attachment sent successfully to: {}", to);
+
+        } catch (Exception e) {
+            log.error("Email with attachment failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Mail server connection failed", e);
+        }
+    }
 }
