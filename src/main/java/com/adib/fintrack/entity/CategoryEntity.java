@@ -10,7 +10,13 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tbl_categories")
+@Table(
+        name = "tbl_categories",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_category_profile_type_name",
+                columnNames = {"profile_id", "type", "name"}
+        )
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

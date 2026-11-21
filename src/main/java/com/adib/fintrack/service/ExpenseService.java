@@ -9,6 +9,8 @@ import com.adib.fintrack.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import com.adib.fintrack.exception.ApiException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,8 +28,13 @@ public class ExpenseService {
     //Adding a new expense to the database
     public ExpenseDto addExpense(ExpenseDto dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
-        CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(),profile.getId())
-                .orElseThrow(() -> new RuntimeException("Category not found for this profile"));
+        CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Category not found for this profile"));
+
+        if (!"expense".equalsIgnoreCase(category.getType())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Selected category is not an expense category");
+        }
+
         ExpenseEntity newExpense = toEntity(dto, profile, category);
         newExpense = expenseRepository.save(newExpense);
         return toDto(newExpense);

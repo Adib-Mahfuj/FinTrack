@@ -11,6 +11,8 @@ import com.adib.fintrack.repository.IncomeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import com.adib.fintrack.exception.ApiException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,8 +30,13 @@ public class IncomeService {
     //Adding a new income to the database
     public IncomeDto addIncome(IncomeDto dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
-        CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(),profile.getId())
-                .orElseThrow(() -> new RuntimeException("Category not found for this profile"));
+        CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Category not found for this profile"));
+
+        if (!"income".equalsIgnoreCase(category.getType())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Selected category is not an income category");
+        }
+
         IncomeEntity newIncome = toEntity(dto, profile, category);
         newIncome = incomeRepository.save(newIncome);
         return toDto(newIncome);
