@@ -1,11 +1,9 @@
 package com.adib.fintrack.controller;
 
+import com.adib.fintrack.dto.ExpenseDto;
 import com.adib.fintrack.dto.IncomeDto;
 import com.adib.fintrack.entity.ProfileEntity;
-import com.adib.fintrack.service.EmailService;
-import com.adib.fintrack.service.ExcelService;
-import com.adib.fintrack.service.IncomeService;
-import com.adib.fintrack.service.ProfileService;
+import com.adib.fintrack.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +22,7 @@ public class EmailController {
     private final ExcelService excelService;
     private final EmailService emailService;
     private final ProfileService profileService;
+    private final ExpenseService expenseService;
 
     @GetMapping("/income-excel")
     public ResponseEntity<Void> emailIncomeExcel() throws IOException {
@@ -38,6 +37,23 @@ public class EmailController {
 
         emailService.sendEmailWithAttachment(
                 profile.getEmail(), subject, body, file, "income_details.xlsx");
+
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/expense-excel")
+    public ResponseEntity<Void> emailExpenseExcel() throws IOException {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        List<ExpenseDto> expenses = expenseService.getCurrentMonthExpensesForCurrentUser();
+        byte[] file = excelService.generateExpenseExcel(expenses);
+
+        String subject = "Your FinTrack Expense Report";
+        String body = "<p>Hi " + profile.getFullName() + ",</p>"
+                + "<p>Please find your expense report attached.</p>"
+                + "<p>Regards,<br/>FinTrack</p>";
+
+        emailService.sendEmailWithAttachment(
+                profile.getEmail(), subject, body, file, "expense_details.xlsx");
 
         return ResponseEntity.ok().build();
     }
