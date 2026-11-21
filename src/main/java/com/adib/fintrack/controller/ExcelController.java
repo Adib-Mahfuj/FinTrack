@@ -1,7 +1,9 @@
 package com.adib.fintrack.controller;
 
+import com.adib.fintrack.dto.ExpenseDto;
 import com.adib.fintrack.dto.IncomeDto;
 import com.adib.fintrack.service.ExcelService;
+import com.adib.fintrack.service.ExpenseService;
 import com.adib.fintrack.service.IncomeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -21,6 +23,7 @@ public class ExcelController {
 
     private final ExcelService excelService;
     private final IncomeService incomeService;
+    private final ExpenseService expenseService;
 
     @GetMapping("/download/income")
     public ResponseEntity<byte[]> downloadIncomeExcel() throws IOException {
@@ -29,6 +32,18 @@ public class ExcelController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=income_details.xlsx")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    @GetMapping("/download/expense")
+    public ResponseEntity<byte[]> downloadExpenseExcel() throws IOException {
+        List<ExpenseDto> expenses = expenseService.getCurrentMonthExpensesForCurrentUser();
+        byte[] file = excelService.generateExpenseExcel(expenses);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=expense_details.xlsx")
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(file);
