@@ -21,26 +21,34 @@ import java.util.List;
 @RequestMapping("/filter")
 public class FilterController {
 
+    private static final List<String> ALLOWED_SORT_FIELDS = List.of("date", "amount", "name");
+
     private final ExpenseService expenseService;
     private final IncomeService incomeService;
 
     @PostMapping
     public ResponseEntity<?> filterTransactions(@RequestBody FilterDto filter) {
 
-        //preparing the data or validation
-        LocalDate startDate = filter.getStartDate() !=null ? filter.getStartDate() : LocalDate.MIN;
-        LocalDate endDate = filter.getEndDate() !=null ? filter.getEndDate() : LocalDate.now();
-        String keyword = filter.getKeyword() !=null ? filter.getKeyword() : "";
-        String sortField = filter.getSortField() !=null ? filter.getSortField() : "date";
+        // preparing the data or validation
+        LocalDate startDate = filter.getStartDate() != null ? filter.getStartDate() : LocalDate.of(1970, 1, 1);
+        LocalDate endDate = filter.getEndDate() != null ? filter.getEndDate() : LocalDate.now();
+        String keyword = filter.getKeyword() != null ? filter.getKeyword() : "";
+
+        if (startDate.isAfter(endDate)) {
+            return ResponseEntity.badRequest().body("Start date cannot be after end date");
+        }
+
+        String sortField = ALLOWED_SORT_FIELDS.contains(filter.getSortField()) ? filter.getSortField() : "date";
         Sort.Direction direction = "desc".equalsIgnoreCase(filter.getSortOrder()) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Sort sort = Sort.by(direction, sortField);
-        if ("income".equals(filter.getType())) {
+
+        if ("income".equalsIgnoreCase(filter.getType())) {
             List<IncomeDto> incomes = incomeService.filterIncomes(startDate, endDate, keyword, sort);
             return ResponseEntity.ok(incomes);
         } else if ("expense".equalsIgnoreCase(filter.getType())) {
             List<ExpenseDto> expenses = expenseService.filterExpenses(startDate, endDate, keyword, sort);
             return ResponseEntity.ok(expenses);
-        } else  {
+        } else {
             return ResponseEntity.badRequest().body("Invalid type. Must be 'income' or 'expense'");
         }
     }
