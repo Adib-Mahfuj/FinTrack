@@ -9,19 +9,19 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
 
-    //select * from tbl_expenses where profile_id = ?1 order by date desc
     List<ExpenseEntity> findByProfileIdOrderByDateDesc(Long profileId);
 
-    //select * from tbl_expenses where profile_id = ?1 order by date desc limit 5
     List<ExpenseEntity> findTop5ByProfileIdOrderByDateDesc(Long profileId);
 
+    // Sum of all expenses of a profile (null when there are none)
     @Query("SELECT SUM(e.amount) FROM ExpenseEntity e WHERE e.profile.id = :profileId")
     BigDecimal findTotalExpenseByProfileId(@Param("profileId") Long profileId);
 
-    //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3 and name like %?4% order by <sort field>
+    // Date range + name search with caller-supplied sorting
     List<ExpenseEntity> findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(
             Long profileId,
             LocalDate startDate,
@@ -30,18 +30,18 @@ public interface ExpenseRepository extends JpaRepository<ExpenseEntity, Long> {
             Sort sort
     );
 
-    //select * from tbl_expenses where profile_id = ?1 and date between ?2 and ?3
     List<ExpenseEntity> findByProfileIdAndDateBetween(
             Long profileId,
             LocalDate startDate,
             LocalDate endDate
     );
 
-    //select * from tbl_expenses where profile_id = ?1 and date =?2
+    // Used by the notification job
     List<ExpenseEntity> findByProfileIdAndDate(Long profileId, LocalDate date);
 
+    // Ownership-aware lookup
+    Optional<ExpenseEntity> findByIdAndProfileId(Long id, Long profileId);
+
+    // Number of expenses using a category (blocks category deletion)
     long countByCategoryId(Long categoryId);
-
-
-
 }

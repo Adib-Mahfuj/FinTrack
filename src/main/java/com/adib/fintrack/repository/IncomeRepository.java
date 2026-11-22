@@ -9,19 +9,19 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface IncomeRepository extends JpaRepository<IncomeEntity, Long> {
 
-    //select * from tbl_incomes where profile_id = ?1 order by date desc
     List<IncomeEntity> findByProfileIdOrderByDateDesc(Long profileId);
 
-    //select * from tbl_incomes where profile_id = ?1 order by date desc limit 5
     List<IncomeEntity> findTop5ByProfileIdOrderByDateDesc(Long profileId);
 
+    // Sum of all incomes of a profile (null when there are none)
     @Query("SELECT SUM(i.amount) FROM IncomeEntity i WHERE i.profile.id = :profileId")
-    BigDecimal findTotalExpenseByProfileId(@Param("profileId") Long profileId);
+    BigDecimal findTotalIncomeByProfileId(@Param("profileId") Long profileId);
 
-    //select * from tbl_incomes where profile_id = ?1 and date between ?2 and ?3 and name like %?4% order by <sort field>
+    // Date range + name search with caller-supplied sorting
     List<IncomeEntity> findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(
             Long profileId,
             LocalDate startDate,
@@ -30,13 +30,15 @@ public interface IncomeRepository extends JpaRepository<IncomeEntity, Long> {
             Sort sort
     );
 
-    ////select * from tbl_incomes where profile_id = ?1 and date between ?2 and ?3
     List<IncomeEntity> findByProfileIdAndDateBetween(
             Long profileId,
             LocalDate startDate,
             LocalDate endDate
     );
 
-    long countByCategoryId(Long categoryId);
+    // Ownership-aware lookup
+    Optional<IncomeEntity> findByIdAndProfileId(Long id, Long profileId);
 
+    // Number of incomes using a category (blocks category deletion)
+    long countByCategoryId(Long categoryId);
 }

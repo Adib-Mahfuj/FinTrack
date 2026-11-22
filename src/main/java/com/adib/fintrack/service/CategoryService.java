@@ -22,6 +22,7 @@ import java.util.Set;
 public class CategoryService {
 
     private static final Set<String> VALID_TYPES = Set.of("income", "expense");
+    private static final int MAX_NAME_LENGTH = 50;
     private static final String DUPLICATE_MESSAGE = "A category with this name already exists for this type";
 
     private final CategoryRepository categoryRepository;
@@ -29,7 +30,7 @@ public class CategoryService {
     private final ExpenseRepository expenseRepository;
     private final ProfileService profileService;
 
-    //save category methods
+    // Creates a category for the current user
     public CategoryDto save(CategoryDto categoryDto) {
         ProfileEntity profile = profileService.getCurrentProfile();
         String name = normalizeName(categoryDto.getName());
@@ -49,26 +50,27 @@ public class CategoryService {
         try {
             newCategory = categoryRepository.saveAndFlush(newCategory);
         } catch (DataIntegrityViolationException e) {
+            // Two concurrent requests can both pass the check; the DB constraint catches the second
             throw new ApiException(HttpStatus.CONFLICT, DUPLICATE_MESSAGE);
         }
         return toDto(newCategory);
     }
 
-    //get categories for current user
+    // Lists all categories of the current user
     public List<CategoryDto> getCategoriesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<CategoryEntity> categories = categoryRepository.findByProfileId(profile.getId());
         return categories.stream().map(this::toDto).toList();
     }
 
-    //get categories by type for current user
+    // Lists the current user's categories of one type
     public List<CategoryDto> getCategoriesByTypeForCurrentUser(String type) {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<CategoryEntity> categories = categoryRepository.findByTypeAndProfileId(type, profile.getId());
         return categories.stream().map(this::toDto).toList();
     }
 
-    //update categories
+    // Updates name, icon and type of an owned category
     @Transactional
     public CategoryDto updateCategory(Long categoryId, CategoryDto categoryDto) {
         ProfileEntity profile = profileService.getCurrentProfile();
@@ -83,6 +85,7 @@ public class CategoryService {
             throw new ApiException(HttpStatus.CONFLICT, DUPLICATE_MESSAGE);
         }
 
+        // Changing the type of a category that already has transactions would corrupt its data
         if (!type.equalsIgnoreCase(existing.getType())) {
             long usage = countTransactions(categoryId);
             if (usage > 0) {
@@ -104,6 +107,7 @@ public class CategoryService {
         return toDto(existing);
     }
 
+    // Deletes an owned category that has no transactions
     @Transactional
     public void deleteCategory(Long categoryId) {
         ProfileEntity profile = profileService.getCurrentProfile();
@@ -122,11 +126,12 @@ public class CategoryService {
             categoryRepository.delete(category);
             categoryRepository.flush();
         } catch (DataIntegrityViolationException e) {
+            // A transaction was added between the usage check and the delete
             throw new ApiException(HttpStatus.CONFLICT, "This category is in use and cannot be deleted");
         }
     }
 
-    // helper methods
+    // Helper methods
     private long countTransactions(Long categoryId) {
         return incomeRepository.countByCategoryId(categoryId)
                 + expenseRepository.countByCategoryId(categoryId);
@@ -136,7 +141,13 @@ public class CategoryService {
         if (name == null || name.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Category name is required");
         }
-        return name.trim();
+
+        String trimmed = name.trim();
+        if (trimmed.length() > MAX_NAME_LENGTH) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Category name must be at most " + MAX_NAME_LENGTH + " characters");
+        }
+        return trimmed;
     }
 
     private String normalizeType(String type) {

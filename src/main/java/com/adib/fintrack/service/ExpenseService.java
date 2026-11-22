@@ -4,13 +4,14 @@ import com.adib.fintrack.dto.ExpenseDto;
 import com.adib.fintrack.entity.CategoryEntity;
 import com.adib.fintrack.entity.ExpenseEntity;
 import com.adib.fintrack.entity.ProfileEntity;
+import com.adib.fintrack.exception.ApiException;
 import com.adib.fintrack.repository.CategoryRepository;
 import com.adib.fintrack.repository.ExpenseRepository;
+import com.adib.fintrack.util.TransactionValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import com.adib.fintrack.exception.ApiException;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,10 +25,18 @@ public class ExpenseService {
     private final CategoryRepository categoryRepository;
     private final ExpenseRepository expenseRepository;
 
-
-    //Adding a new expense to the database
+    // Validates and saves a new expense
     public ExpenseDto addExpense(ExpenseDto dto) {
         ProfileEntity profile = profileService.getCurrentProfile();
+
+        dto.setName(TransactionValidator.requireName(dto.getName()));
+        TransactionValidator.requirePositiveAmount(dto.getAmount());
+        TransactionValidator.rejectFutureDate(dto.getDate());
+
+        if (dto.getCategoryId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Category is required");
+        }
+
         CategoryEntity category = categoryRepository.findByIdAndProfileId(dto.getCategoryId(), profile.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Category not found for this profile"));
 
@@ -40,7 +49,7 @@ public class ExpenseService {
         return toDto(newExpense);
     }
 
-    //Retrieves all expenses for current month/based on the start date and end date
+    // Expenses of the current calendar month
     public List<ExpenseDto> getCurrentMonthExpensesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDate now = LocalDate.now();
@@ -50,47 +59,43 @@ public class ExpenseService {
         return list.stream().map(this::toDto).toList();
     }
 
-    //Delete expense by id for current user
+    // Deletes an expense owned by the current user
     public void deleteExpense(Long expenseId) {
         ProfileEntity profile = profileService.getCurrentProfile();
-        ExpenseEntity entity =expenseRepository.findById(expenseId)
-                .orElseThrow(() -> new RuntimeException("Expense not found for this profile"));
-        if (!entity.getProfile().getId().equals(profile.getId())) {
-            throw  new RuntimeException("Unauthorized to delete this expense");
-        }
+        ExpenseEntity entity = expenseRepository.findByIdAndProfileId(expenseId, profile.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Expense not found"));
         expenseRepository.delete(entity);
     }
 
-    //Get latest 5 expenses for current user
+    // Latest 5 expenses of the current user
     public List<ExpenseDto> getLatest5ExpensesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<ExpenseEntity> list = expenseRepository.findTop5ByProfileIdOrderByDateDesc(profile.getId());
         return list.stream().map(this::toDto).toList();
     }
 
-    //Get total expenses for current user
+    // All-time expense total of the current user
     public BigDecimal getTotalExpensesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         BigDecimal total = expenseRepository.findTotalExpenseByProfileId(profile.getId());
         return total != null ? total : BigDecimal.ZERO;
     }
 
-    //filter expenses
+    // Filtered and sorted expenses
     public List<ExpenseDto> filterExpenses(LocalDate startDate, LocalDate endDate, String keyword, Sort sort) {
         ProfileEntity profile = profileService.getCurrentProfile();
-        List<ExpenseEntity> list =  expenseRepository.findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(profile.getId()
-                , startDate, endDate, keyword, sort);
+        List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(
+                profile.getId(), startDate, endDate, keyword, sort);
         return list.stream().map(this::toDto).toList();
     }
 
-    //Notifications
+    // Used by the notification job (runs outside a web request)
     public List<ExpenseDto> getExpensesForUserOnDate(Long profileId, LocalDate date) {
         List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDate(profileId, date);
         return list.stream().map(this::toDto).toList();
     }
 
-
-    //helper methods
+    // Helper methods
     private ExpenseEntity toEntity(ExpenseDto dto, ProfileEntity profile, CategoryEntity category) {
         return ExpenseEntity.builder()
                 .name(dto.getName())
@@ -101,6 +106,7 @@ public class ExpenseService {
                 .category(category)
                 .build();
     }
+
     private ExpenseDto toDto(ExpenseEntity entity) {
         return ExpenseDto.builder()
                 .id(entity.getId())
@@ -114,6 +120,5 @@ public class ExpenseService {
                 .updatedAt(entity.getUpdatedAt())
                 .build();
     }
-
 
 }
