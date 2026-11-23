@@ -40,7 +40,9 @@ public class SecurityConfig {
                                 "/login",
                                 "/activate",
                                 "/health",
-                                "/status"
+                                "/status",
+                                // Without this, every error page is blocked and surfaces as an empty 401/403
+                                "/error"
                         ).permitAll()
                         .anyRequest().authenticated())
                 // Missing or invalid credentials answer 401 (Spring's default would be 403),
