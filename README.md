@@ -147,8 +147,6 @@ java -jar target/*.jar
 
 ## Configuration
 
-Configure the application in `src/main/resources/application.properties`, or use environment variables. Do not commit real secrets.
-
 ```properties
 server.port=8080
 
@@ -186,8 +184,8 @@ app.activation.url=${FINTRACK_BACKEND_URL}
 
 | Module | Base Path | Description |
 | --- | --- | --- |
-| Authentication | — | Registration, login, and account access |
-| Categories | — | Create, read, and update categories |
+| Authentication | `/register`| Registration, login, and account access |
+| Categories | `/categories`| Create, read, update and delete categories |
 | Income | `/incomes` | Manage income records |
 | Expense | `/expenses` | Manage expense records |
 | Filter | `/filter` | Filter and sort transactions |
