@@ -152,17 +152,25 @@ Configure the application in `src/main/resources/application.properties`, or use
 ```properties
 server.port=8080
 
-# Database (MySQL for local development)
-spring.datasource.url=jdbc:mysql://localhost:3306/fintrack
-spring.datasource.username=your_db_username
-spring.datasource.password=your_db_password
+# Database (MySQL)
+spring.datasource.url=jdbc:mysql://localhost:3306/fintrackappdb
+spring.datasource.username=***REMOVED***
+spring.datasource.password=***REMOVED***
+
+# JPA
 spring.jpa.hibernate.ddl-auto=update
 
-# JWT
-jwt.secret=your_long_random_secret
+# Brevo (Email)
+brevo.api.key=${BREVO_API_KEY}
+brevo.sender.email=${BREVO_FROM_EMAIL}
 
-# Brevo (email)
-brevo.api.key=your_brevo_api_key
+# JWT
+jwt.secret=${JWT_SECRET_KEY}
+jwt.expiration=86400000
+
+# Frontend & Backend URLs
+finance.tracker.frontend.url=${FINTRACK_FRONTEND_URL}
+app.activation.url=${FINTRACK_BACKEND_URL}
 ```
 
 | Setting | Description |
@@ -224,5 +232,5 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
 Junior Full-Stack Developer (React & Spring Boot)
 
 - GitHub: [@Adib-Mahfuj](https://github.com/Adib-Mahfuj)
-- LinkedIn: [Adib Mahfuj](https://www.linkedin.com/in/adib-mahfuj-669493398)
+- LinkedIn: [Adib Mahfuj](https://www.linkedin.com/in/adibmahfuj/)
 - Email: adibmahfuj.dev@gmail.com
