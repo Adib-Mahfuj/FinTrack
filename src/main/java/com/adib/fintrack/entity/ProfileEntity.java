@@ -36,6 +36,8 @@ public class ProfileEntity {
     // SHA-256 hash of the emailed reset token; the raw token is never stored
     private String passwordResetToken;
     private LocalDateTime passwordResetExpiresAt;
+    // Tokens issued before this moment are rejected; null means the password was never changed
+    private LocalDateTime passwordChangedAt;
 
     @PrePersist
     public void prePersist() {

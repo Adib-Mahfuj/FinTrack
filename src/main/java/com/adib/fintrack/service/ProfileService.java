@@ -263,11 +263,12 @@ public class ProfileService {
         requireValidPassword(newPassword);
 
         profile.setPassword(passwordEncoder.encode(newPassword));
+        // Every JWT issued before this moment stops working
+        profile.setPasswordChangedAt(LocalDateTime.now());
         profile.setPasswordResetToken(null);
         profile.setPasswordResetExpiresAt(null);
         profileRepository.save(profile);
     }
-
     private String generateResetToken() {
         byte[] bytes = new byte[32];
         SECURE_RANDOM.nextBytes(bytes);

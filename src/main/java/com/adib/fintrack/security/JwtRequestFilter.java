@@ -51,17 +51,30 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
             if (jwtUtil.validateToken(jwt, userDetails)) {
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities()
-                        );
+                if (isIssuedBeforePasswordChange(jwt, userDetails)) {
+                    // Not authenticated: the request ends in the normal 401 and the app sends the user to login
+                    logger.warn("JWT rejected: issued before the last password change");
+                } else {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities()
+                            );
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // Tokens issued before the password last changed must stop working
+    private boolean isIssuedBeforePasswordChange(String jwt, UserDetails userDetails) {
+        if (userDetails instanceof AppUserDetails appUser && appUser.getPasswordChangedAt() != null) {
+            return jwtUtil.isIssuedBefore(jwt, appUser.getPasswordChangedAt());
+        }
+        return false;
     }
 }

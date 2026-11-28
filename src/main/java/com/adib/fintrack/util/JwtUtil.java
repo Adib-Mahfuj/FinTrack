@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +40,10 @@ public class JwtUtil {
         return extractClaim(token, Claims::getExpiration);
     }
 
+    public Date extractIssuedAt(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
@@ -51,6 +59,16 @@ public class JwtUtil {
 
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
+    }
+
+    // A JWT stores its issue time in whole seconds, so the cutoff is compared to the second as well.
+    // That keeps a token issued right after a password change valid.
+    public boolean isIssuedBefore(String token, LocalDateTime moment) {
+        Date issuedAt = extractIssuedAt(token);
+        if (issuedAt == null) return true;
+
+        Instant cutoff = moment.atZone(ZoneId.systemDefault()).toInstant().truncatedTo(ChronoUnit.SECONDS);
+        return issuedAt.toInstant().isBefore(cutoff);
     }
 
     public String generateToken(String username) {
