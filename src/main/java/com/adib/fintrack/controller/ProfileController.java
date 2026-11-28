@@ -66,9 +66,13 @@ public class ProfileController {
         return ResponseEntity.ok(profileService.updateProfile(request));
     }
 
+    // Returns a fresh token: the old ones stop working, but this session stays signed in
     @PutMapping("/profile/password")
     public ResponseEntity<Map<String, String>> changePassword(@RequestBody ChangePasswordRequest request) {
-        profileService.changePassword(request);
-        return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+        String newToken = profileService.changePassword(request);
+        return ResponseEntity.ok(Map.of(
+                "message", "Password updated successfully",
+                "token", newToken
+        ));
     }
 }

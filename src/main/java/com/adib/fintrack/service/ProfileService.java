@@ -193,8 +193,9 @@ public class ProfileService {
         return toDto(profileRepository.save(profile));
     }
 
-    // Changes the password after verifying the current one
-    public void changePassword(ChangePasswordRequest request) {
+    // Changes the password after verifying the current one. Every older token stops working,
+    // so a fresh token is returned to keep the current session signed in.
+    public String changePassword(ChangePasswordRequest request) {
         ProfileEntity profile = getCurrentProfile();
 
         String currentPassword = request.getCurrentPassword();
@@ -208,7 +209,11 @@ public class ProfileService {
         }
 
         profile.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        profile.setPasswordChangedAt(LocalDateTime.now());
         profileRepository.save(profile);
+
+        // Issued after passwordChangedAt, so it passes the filter's check
+        return jwtUtil.generateToken(profile.getEmail());
     }
 
     // Emails a one-hour reset link. Unknown, inactive and rate-limited requests return silently,
@@ -269,6 +274,7 @@ public class ProfileService {
         profile.setPasswordResetExpiresAt(null);
         profileRepository.save(profile);
     }
+
     private String generateResetToken() {
         byte[] bytes = new byte[32];
         SECURE_RANDOM.nextBytes(bytes);
