@@ -9,6 +9,7 @@ import com.adib.fintrack.exception.ApiException;
 import com.adib.fintrack.repository.ProfileRepository;
 import com.adib.fintrack.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -22,10 +23,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
@@ -38,6 +47,11 @@ public class ProfileService {
     private static final int MAX_PASSWORD_BYTES = 72;
     private static final int MAX_IMAGE_URL_LENGTH = 255;
 
+    private static final Duration RESET_TOKEN_TTL = Duration.ofHours(1);
+    // Minimum gap between two reset emails for the same account
+    private static final Duration RESET_REQUEST_COOLDOWN = Duration.ofSeconds(60);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final ProfileRepository profileRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
@@ -46,6 +60,9 @@ public class ProfileService {
 
     @Value("${app.activation.url}")
     private String activationURL;
+
+    @Value("${finance.tracker.frontend.url}")
+    private String frontendUrl;
 
     // Registers an inactive profile and emails the activation link
     public ProfileDto registerProfile(ProfileDto profileDto) {
@@ -192,6 +209,78 @@ public class ProfileService {
 
         profile.setPassword(passwordEncoder.encode(request.getNewPassword()));
         profileRepository.save(profile);
+    }
+
+    // Emails a one-hour reset link. Unknown, inactive and rate-limited requests return silently,
+    // so the response never reveals whether an account exists.
+    public void requestPasswordReset(String rawEmail) {
+        String email = requireEmail(rawEmail);
+
+        ProfileEntity profile = profileRepository.findByEmail(email).orElse(null);
+        if (profile == null || !Boolean.TRUE.equals(profile.getIsActive())) return;
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = profile.getPasswordResetExpiresAt();
+        if (expiresAt != null && expiresAt.minus(RESET_TOKEN_TTL).plus(RESET_REQUEST_COOLDOWN).isAfter(now)) {
+            return;
+        }
+
+        String token = generateResetToken();
+        profile.setPasswordResetToken(hashToken(token));
+        profile.setPasswordResetExpiresAt(now.plus(RESET_TOKEN_TTL));
+        profileRepository.save(profile);
+
+        String resetLink = frontendUrl.replaceAll("/+$", "") + "/reset-password?token=" + token;
+        String subject = "Reset your FinTrack password";
+        String body = """
+                <p>Hello,</p>
+                <p>We received a request to reset your FinTrack password. Use the link below to choose a new one. \
+                The link expires in 1 hour.</p>
+                <p><a href="%s">Reset your password</a></p>
+                <p>If you did not request this, you can safely ignore this email.</p>
+                """.formatted(resetLink);
+
+        try {
+            emailService.sendEmail(profile.getEmail(), subject, body);
+        } catch (RuntimeException e) {
+            // A mail failure must not reveal that the account exists
+            log.error("Password reset email could not be sent to {}", profile.getEmail(), e);
+        }
+    }
+
+    // Sets a new password for a valid, unexpired token and consumes the token
+    public void resetPassword(String token, String newPassword) {
+        ProfileEntity profile = (token == null || token.isBlank())
+                ? null
+                : profileRepository.findByPasswordResetToken(hashToken(token.trim())).orElse(null);
+
+        if (profile == null
+                || profile.getPasswordResetExpiresAt() == null
+                || profile.getPasswordResetExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "This reset link is invalid or has expired");
+        }
+
+        requireValidPassword(newPassword);
+
+        profile.setPassword(passwordEncoder.encode(newPassword));
+        profile.setPasswordResetToken(null);
+        profile.setPasswordResetExpiresAt(null);
+        profileRepository.save(profile);
+    }
+
+    private String generateResetToken() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 
     // Validation helpers

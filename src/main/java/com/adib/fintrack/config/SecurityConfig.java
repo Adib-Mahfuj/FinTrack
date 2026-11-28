@@ -39,6 +39,8 @@ public class SecurityConfig {
                                 "/register",
                                 "/login",
                                 "/activate",
+                                "/forgot-password",
+                                "/reset-password",
                                 "/health",
                                 "/status",
                                 // Without this, every error page is blocked and surfaces as an empty 401/403

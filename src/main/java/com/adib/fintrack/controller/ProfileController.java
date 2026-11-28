@@ -2,7 +2,9 @@ package com.adib.fintrack.controller;
 
 import com.adib.fintrack.dto.AuthDto;
 import com.adib.fintrack.dto.ChangePasswordRequest;
+import com.adib.fintrack.dto.ForgotPasswordRequest;
 import com.adib.fintrack.dto.ProfileDto;
+import com.adib.fintrack.dto.ResetPasswordRequest;
 import com.adib.fintrack.dto.UpdateProfileRequest;
 import com.adib.fintrack.service.ProfileService;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,19 @@ public class ProfileController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDto authDto) {
         return ResponseEntity.ok(profileService.authenticateAndGenerateToken(authDto));
+    }
+
+    // Always answers the same way, whether or not the email belongs to an account
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        profileService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "If an account exists for this email, a reset link has been sent"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        profileService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully"));
     }
 
     @GetMapping("/profile")

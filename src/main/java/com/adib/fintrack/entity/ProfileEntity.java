@@ -33,6 +33,9 @@ public class ProfileEntity {
     private LocalDateTime updatedAt;
     private Boolean isActive;
     private String activationToken;
+    // SHA-256 hash of the emailed reset token; the raw token is never stored
+    private String passwordResetToken;
+    private LocalDateTime passwordResetExpiresAt;
 
     @PrePersist
     public void prePersist() {
@@ -40,6 +43,5 @@ public class ProfileEntity {
             isActive = false;
         }
     }
-
 
 }
